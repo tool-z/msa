@@ -1,0 +1,69 @@
+server:
+  port: 8000
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://127.0.0.1:8761/eureka
+
+##### API #####
+spring:
+  application:
+    name: gateway-svc
+  cloud:
+    gateway:
+      default-filters:
+        - name: GlobalFilter
+          args:
+            baseMessage: Spring Cloud Gateway Global Filter
+            preLogger: true
+            postLogger: true
+      routes:
+        # AUTH
+        - id: auth-svc
+          uri: lb://AUTH-SVC
+          predicates:
+            - Path=/auth-svc/login
+            - Method=POST
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/auth-svc/(?<segment>.*), /$\{segment}
+        - id: auth-svc
+          uri: lb://AUTH-SVC
+          predicates:
+            - Path=/auth-svc/api/**
+            - Method=GET,POST
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/auth-svc/(?<segment>.*), /$\{segment}
+        - id: auth-svc
+          uri: lb://AUTH-SVC
+          predicates:
+            - Path=/auth-svc/actuator/**
+            - Method=GET,POST
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/auth-svc/(?<segment>.*), /$\{segment}
+        # AUTH - AuthorizationHeaderFilter
+        - id: auth-svc
+          uri: lb://AUTH-SVC
+          predicates:
+            - Path=/auth-svc/**
+            - Method=GET
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/auth-svc/(?<segment>.*), /$\{segment}
+            - AuthorizationHeaderFilter
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: refresh, health, beans, busrefresh, info, metrics, prometheus
+
+logging:
+  level:
+    org.springframework: WARN
